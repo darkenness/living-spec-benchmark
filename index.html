@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta name="robots" content="noindex">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Living Spec benchmark</title>
+<style>
+/* Layout: Short hero, compact category overview, then Where and other-scene video bands; one blue accent. */
+:root {
+  --bg: #ffffff;
+  --band: #f5f5f7;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --line: #d2d2d7;
+  --accent: #0071e3;
+  --tile: #000000;
+  --empty: rgba(0, 0, 0, 0.045);
+  --done: #1a7f37;
+  --doing: #b25000;
+  --todo: #86868b;
+  --veil: rgba(0, 0, 0, 0.82);
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000; --band: #161617; --fg: #f5f5f7; --muted: #a1a1a6; --line: #424245;
+    --accent: #2997ff; --tile: #1c1c1e; --empty: rgba(255, 255, 255, 0.06);
+    --done: #30d158; --doing: #ff9f0a; --todo: #8e8e93; --veil: rgba(0, 0, 0, 0.88); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --band: #161617; --fg: #f5f5f7; --muted: #a1a1a6; --line: #424245;
+  --accent: #2997ff; --tile: #1c1c1e; --empty: rgba(255, 255, 255, 0.06);
+  --done: #30d158; --doing: #ff9f0a; --todo: #8e8e93; --veil: rgba(0, 0, 0, 0.88); color-scheme: dark;
+}
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 17px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; }
+.band { padding-block: 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.band.alt { background: var(--band); }
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 32px; }
+h1 { font-size: clamp(38px, 6.4vw, 64px); line-height: 1.06; font-weight: 700; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+h2 { font-size: clamp(28px, 4vw, 40px); line-height: 1.1; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+h3 { font-size: 19px; line-height: 1.35; font-weight: 600; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+[hidden] { display: none !important; }
+[id] { scroll-margin-top: 24px; }
+.sub { font-size: 19px; color: var(--muted); max-width: 46em; }
+.hero { padding-block: 88px 56px; }
+.hero .wrap { gap: 20px; }
+.overview { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 15px; }
+.overview th, .overview td { padding: 8px; text-align: left; vertical-align: top; }
+.overview th { font-weight: 600; color: var(--muted); white-space: nowrap; }
+.overview th:first-child { width: 20%; }
+.overview th:last-child { width: 38%; }
+.overview td { border-top: 1px solid var(--line); }
+.overview td:first-child { white-space: nowrap; }
+.overview a { color: var(--accent); text-decoration: none; }
+.overview a:hover { text-decoration: underline; }
+
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px 32px; align-items: start; }
+.grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px 24px; }
+.card { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.card.wide { grid-column: 1 / -1; }
+.detail { display: grid; gap: 10px; min-width: 0; }
+.frame { position: relative; aspect-ratio: 16 / 9; max-width: 100%; border-radius: 18px; overflow: hidden; background: var(--tile); }
+.frame.dual { aspect-ratio: 32 / 9; }
+.frame video { width: 100%; height: 100%; display: block; object-fit: contain; background: var(--tile); }
+.camera { position: absolute; top: 10px; font: 600 13px/1 var(--sans); color: var(--bg); background: var(--fg);
+  border-radius: 999px; padding: 7px 12px; pointer-events: none; }
+.camera.external { left: 10px; }
+.camera.wrist { left: calc(50% + 10px); }
+.frame.empty { aspect-ratio: 16 / 5; background: var(--empty); display: grid; place-items: center; }
+.frame.empty span { font-size: 17px; font-weight: 600; color: var(--todo); }
+.zoom { position: absolute; top: 10px; right: 10px; font: 600 13px/1 var(--sans); color: #ffffff; background: rgba(0, 0, 0, 0.55);
+  border: 0; border-radius: 999px; padding: 7px 12px; cursor: pointer; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pill { font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; border: 1px solid currentColor; color: var(--accent); }
+.state { font-size: 12px; font-weight: 600; }
+.state::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 5px; vertical-align: 1px; }
+.state.done { color: var(--done); }
+.state.doing { color: var(--doing); }
+.state.todo { color: var(--todo); }
+.quote { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+.quote code { font-family: var(--mono); font-size: 13px; color: var(--fg); }
+.thumbs { display: flex; gap: 10px; }
+.thumbs button { display: grid; gap: 4px; padding: 0; border: 0; background: none; cursor: zoom-in; color: var(--muted); font: 12px var(--sans); text-align: left; }
+.thumbs img { width: 120px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; display: block; background: var(--tile); }
+.switch { display: inline-flex; justify-self: start; gap: 2px; padding: 3px; border-radius: 999px; background: var(--empty); }
+.switch button { font: 600 13px/1 var(--sans); color: var(--muted); background: none; border: 0; border-radius: 999px; padding: 7px 16px; cursor: pointer; }
+.switch button[aria-pressed="true"] { background: var(--bg); color: var(--fg); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.foot { font-size: 13px; color: var(--muted); }
+
+dialog { border: 0; padding: 0; background: none; max-width: 92vw; max-height: 92vh; }
+dialog::backdrop { background: var(--veil); }
+dialog video, dialog img { display: block; width: 92vw; max-height: 88vh; object-fit: contain; border-radius: 12px; background: #000000; }
+
+@media (max-width: 1000px) { .grid.three { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .band { padding-block: 44px; } .grid.three { grid-template-columns: 1fr; } .thumbs img { width: 104px; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<section class="band hero">
+  <div class="wrap">
+    <h1>Living Spec benchmark</h1>
+    <p class="sub">场景展示 · 第一族：冰箱留言板（家庭场景）</p>
+  </div>
+</section>
+<section class="band alt">
+  <div class="wrap">
+    
+      <table class="overview">
+        <thead><tr><th scope="col">类别</th><th scope="col">场景</th><th scope="col">状态</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Where</td>
+            <td><a href="#K1">K1</a> · <a href="#F1">F1</a> · <a href="#F2">F2</a></td>
+            <td>有视频，判分复核中</td>
+          </tr>
+          <tr>
+            <td>What</td>
+            <td>2 个</td>
+            <td>待做</td>
+          </tr>
+          <tr>
+            <td>When</td>
+            <td>2 个</td>
+            <td>待做</td>
+          </tr>
+          <tr>
+            <td>Whether</td>
+            <td>2 个</td>
+            <td>待做</td>
+          </tr>
+          <tr>
+            <td>组合</td>
+            <td>4 个</td>
+            <td>待做</td>
+          </tr>
+          <tr>
+            <td>其他场景</td>
+            <td><a href="#D1">D1</a> · <a href="#D2">D2</a> · <a href="#D3">D3</a> · <a href="#E1">E1</a> · <a href="#E2">E2</a> · <a href="#E3">E3</a> · <a href="#R1">R1</a> · <a href="#R2">R2</a> · <a href="#R3">R3</a></td>
+            <td>有视频，旧版</td>
+          </tr>
+        </tbody>
+      </table>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <h2>Where</h2>
+    <div class="grid">
+      <article class="card wide" id="K1">
+        <div class="frame v dual" data-folder="K1-kitchen-note">
+          <video controls muted playsinline preload="metadata" poster="media/K1-kitchen-note-poster.jpg" src="media/K1-kitchen-note.mp4"></video>
+          <span class="camera external">外部</span><span class="camera wrist">腕部</span>
+          <button class="zoom" type="button" data-video="media/K1-kitchen-note.mp4">放大</button>
+        </div>
+        <div class="meta"><span class="pill">K1</span><span class="state done">已搭好</span></div>
+        <h3>冰箱便利贴直接写任务</h3>
+        <div class="detail v" data-folder="K1-kitchen-note">
+          <p class="quote">冰箱便利贴：<code>Put the banana in the bowl.</code></p>
+          <div class="thumbs">
+            <button type="button" data-image="media/K1-kitchen-note-scene.jpg"><img src="media/K1-kitchen-note-scene.jpg" alt="场景" loading="lazy"><span>场景</span></button>
+            <button type="button" data-image="media/K1-kitchen-note-text.jpg"><img src="media/K1-kitchen-note-text.jpg" alt="文字特写" loading="lazy"><span>文字特写</span></button>
+          </div>
+        </div>
+      </article>
+      <article class="card wide" id="F1">
+        <div class="frame v dual" data-folder="F1-fridge-drawer-note">
+          <video controls muted playsinline preload="metadata" poster="media/F1-fridge-drawer-note-poster.jpg" src="media/F1-fridge-drawer-note.mp4"></video>
+          <span class="camera external">外部</span><span class="camera wrist">腕部</span>
+          <button class="zoom" type="button" data-video="media/F1-fridge-drawer-note.mp4">放大</button>
+        </div>
+        <div class="meta"><span class="pill">F1</span><span class="state doing">进行中</span></div>
+        <h3>便签指向抽屉，打开才知道做什么</h3>
+        <div class="detail v" data-folder="F1-fridge-drawer-note">
+          <p class="quote">冰箱便签：<code>Today&#x27;s task is in the left top drawer.</code>；左抽屉纸条：<code>Please place the apple in the bowl.</code></p>
+          <div class="thumbs">
+            <button type="button" data-image="media/F1-fridge-drawer-note-scene.jpg"><img src="media/F1-fridge-drawer-note-scene.jpg" alt="场景" loading="lazy"><span>场景</span></button>
+            <button type="button" data-image="media/F1-fridge-drawer-note-text.jpg"><img src="media/F1-fridge-drawer-note-text.jpg" alt="文字特写" loading="lazy"><span>文字特写</span></button>
+          </div>
+        </div>
+      </article>
+      <article class="card wide" id="F2">
+        <div class="frame v dual" data-folder="F2-fridge-chore-board">
+          <video controls muted playsinline preload="metadata" poster="media/F2-fridge-chore-board-poster.jpg" src="media/F2-fridge-chore-board.mp4"></video>
+          <span class="camera external">外部</span><span class="camera wrist">腕部</span>
+          <button class="zoom" type="button" data-video="media/F2-fridge-chore-board.mp4">放大</button>
+        </div>
+        <div class="meta"><span class="pill">F2</span><span class="state doing">进行中</span></div>
+        <h3>家务板只做 Robot 一栏、跳过划掉的项</h3>
+        <div class="detail v" data-folder="F2-fridge-chore-board">
+          <p class="quote">家务板 <code>Jobs for today</code>：Robot 一栏 <code>Put the apple in the grey bin.</code>，其余两条已划掉；Mom、Sam 两栏另有任务；便签 <code>Shopping list: bread, eggs</code></p>
+          <div class="thumbs">
+            <button type="button" data-image="media/F2-fridge-chore-board-scene.jpg"><img src="media/F2-fridge-chore-board-scene.jpg" alt="场景" loading="lazy"><span>场景</span></button>
+            <button type="button" data-image="media/F2-fridge-chore-board-text.jpg"><img src="media/F2-fridge-chore-board-text.jpg" alt="文字特写" loading="lazy"><span>文字特写</span></button>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+<section class="band alt">
+  <div class="wrap">
+    <h2>其他场景</h2>
+    <div class="grid three">
+      <article class="card" id="D1">
+        <div class="frame v" data-folder="D1-desk-whiteboard">
+          <video controls muted playsinline preload="metadata" poster="media/D1-desk-whiteboard-scene.jpg" src="media/D1-desk-whiteboard.mp4"></video>
+          
+          <button class="zoom" type="button" data-video="media/D1-desk-whiteboard.mp4">放大</button>
+        </div>
+        <div class="meta"><span class="pill">D1</span><span class="state done">已搭好</span></div>
+        <h3>桌后小白板上的马克笔简笔画：遥控器 → 碗</h3>
+        <div class="detail v" data-folder="D1-desk-whiteboard">
+          <p class="quote">白板简笔画：遥控器图标 → 碗图标</p>
+          <div class="thumbs">
+            <button type="button" data-image="media/D1-desk-whiteboard-scene.jpg"><img src="media/D1-desk-whiteboard-scene.jpg" alt="场景" loading="lazy"><span>场景</span></button>
+            <button type="button" data-image="media/D1-desk-whiteboard-text.jpg"><img src="media/D1-desk-whiteboard-text.jpg" alt="文字特写" loading="lazy"><span>文字特写</span></button>
+          </div>
+        </div>
+      </article>
+      <article class="card" id="D2">
+        <div class="frame v" data-folder="D2-desk-notepad">
+          <video controls muted playsinline preload="metadata" poster="media/D2-desk-notepad-scene.jpg" src="media/D2-desk-notepad.mp4"></video>
+          
+          <button class="zoom" type="button" data-video="media/D2-desk-notepad.mp4">放大</button>
+        </div>
+        <div class="meta"><span class="pill">D2</span><span class="state done">已搭好</span></div>
+        <h3>摊开的待办本：已勾掉的、提醒、待办各一条，只做待办</h3>
+        <div class="detail v" data-folder="D2-desk-notepad">
+          <p class="quote">待办本 To do：<code>Return library book</code>（已勾掉）、<code>Call Mom 5 pm</code>、<code>Put the cube in the wooden bowl</code></p>
+          <div class="thumbs">
+            <button type="button" data-image="media/D2-desk-notepad-scene.jpg"><img src="media/D2-desk-notepad-scene.jpg" alt="场景" loading="lazy"><span>场景</span></button>
+            <button type="button" data-image="media/D2-desk-notepad-text.jpg"><img src="media/D2-desk-notepad-text.jpg" alt="文字特写" loading="lazy"><span>文字特写</span></button>
+          </div>
+        </div>
+      </article>
+      <article class="card" id="D3">
+        <div class="frame v" data-folder="D3-desk-phone-then-notepad">
+          <video controls muted playsinline preload="metadata" poster="media/D3-desk-phone-then-notepad-scene.jpg" src="media/D3-desk-phone-then-notepad.mp4"></video>
+          
+          <button class="zoom" type="button" data-video="media/D3-desk-phone-then-notepad.mp4">放大</button>
+        </div>
+        <div class="meta"><span class="pill">D3</span><span class="state done">已搭好</span></div>
+        <h3>手机锁屏消息指向待办本</h3>
+        <div class="detail v" data-folder="D3-desk-phone-then-notepad">
+          <p class="quote">手机（Mom）：<code>I left today&#x27;s to-do in the notebook on your desk.</code>；待办本：<code>Water the plant</code>（已勾掉）、<code>Put the remote in the wooden bowl</code></p>
+          <div class="thumbs">
+            <button type="button" data-image="media/D3-desk-phone-then-notepad-scene.jpg"><img src="media/D3-desk-phone-then-notepad-scene.jpg" alt="场景" loading="lazy"><span>场景</span></button>
+            <button type="button" data-image="media/D3-desk-phone-then-notepad-text.jpg"><img src="media/D3-desk-phone-then-notepad-text.jpg" alt="文字特写" loading="lazy"><span>文字特写</span></button>
+          </div>
+        </div>
+      </article>
+      <article class="card" id="E1">
+        <div class="frame v" data-folder="E1-entry-labels-on-top">
+          <video controls muted playsinline preload="metadata" poster="media/E1-entry-labels-on-top-scene.jpg" src="media/E1-entry-labels-on-top.mp4"></video>
+          
+          <button class="zoom" type="button" data-video="media/E1-entry-labels-on-top.mp4">放大</button>
+        </div>
+        <div class="meta"><span class="pill">E1</span><span class="state done">已搭好</span></div>
+        <h3>快递面单朝上，按收件人放进对应名牌的收件篮</h3>
+        <div class="detail v" data-folder="E1-entry-labels-on-top">
+          <p class="quote">面单：parcel_a 给 Mia Chen、parcel_b 给 Sam Lee；收件篮名牌 MIA / SAM</p>
+          <div class="thumbs">
+            <button type="button" data-image="media/E1-entry-labels-on-top-scene.jpg"><img src="media/E1-entry-labels-on-top-scene.jpg" alt="场景" loading="lazy"><span>场景</span></button>
+            <button type="button" data-image="media/E1-entry-labels-on-top-text.jpg"><img src="media/E1-entry-labels-on-top-text.jpg" alt="文字特写" loading="lazy"><span>文字特写</span></button>
+          </div>
+        </div>
+      </article>
+      <article class="card" id="E2">
+        <div class="frame v" data-folder="E2-entry-labels-on-top-swapped">
+          <video controls muted playsinline preload="metadata" poster="media/E2-entry-labels-on-top-swapped-scene.jpg" src="media/E2-entry-labels-on-top-swapped.mp4"></video>
+          
+          <button class="zoom" type="button" data-video="media/E2-entry-labels-on-top-swapped.mp4">放大</button>
+        </div>
+        <div class="meta"><span class="pill">E2</span><span class="state done">已搭好</span></div>
+        <h3>同 E1，收件人互换</h3>
+        <div class="detail v" data-folder="E2-entry-labels-on-top-swapped">
+          <p class="quote">面单：parcel_a 给 Sam Lee、parcel_b 给 Mia Chen；收件篮名牌 MIA / SAM</p>
+          <div class="thumbs">
+            <button type="button" data-image="media/E2-entry-labels-on-top-swapped-scene.jpg"><img src="media/E2-entry-labels-on-top-swapped-scene.jpg" alt="场景" loading="lazy"><span>场景</span></button>
+            <button type="button" data-image="media/E2-entry-labels-on-top-swapped-text.jpg"><img src="media/E2-entry-labels-on-top-swapped-text.jpg" alt="文字特写" loading="lazy"><span>文字特写</span></button>
+          </div>
+        </div>
+      </article>
+      <article class="card" id="E3">
+        <div class="frame v" data-folder="E3-entry-label-behind">
+          <video controls muted playsinline preload="metadata" poster="media/E3-entry-label-behind-scene.jpg" src="media/E3-entry-label-behind.mp4"></video>
+          
+          <button class="zoom" type="button" data-video="media/E3-entry-label-behind.mp4">放大</button>
+        </div>
+        <div class="meta"><span class="pill">E3</span><span class="state done">已搭好</span></div>
+        <h3>面单贴在背对机器人的一面，要先转过快递</h3>
+        <div class="detail v" data-folder="E3-entry-label-behind">
+          <p class="quote">面单（背面）：parcel_a 给 Sam Lee、parcel_b 给 Mia Chen；收件篮名牌 MIA / SAM</p>
+          <div class="thumbs">
+            <button type="button" data-image="media/E3-entry-label-behind-scene.jpg"><img src="media/E3-entry-label-behind-scene.jpg" alt="场景" loading="lazy"><span>场景</span></button>
+            <button type="button" data-image="media/E3-entry-label-behind-text.jpg"><img src="media/E3-entry-label-behind-text.jpg" alt="文字特写" loading="lazy"><span>文字特写</span></button>
+          </div>
+        </div>
+      </article>
+      <article class="card" id="R1">
+        <div class="frame v" data-folder="R1-recycling-can">
+          <video controls muted playsinline preload="metadata" poster="media/R1-recycling-can-scene.jpg" src="media/R1-recycling-can.mp4"></video>
+          
+          <button class="zoom" type="button" data-video="media/R1-recycling-can.mp4">放大</button>
+        </div>
+        <div class="meta"><span class="pill">R1</span><span class="state done">已搭好</span></div>
+        <h3>两只桶前贴分类牌（名字 + 图示），易拉罐按牌子扔</h3>
+        <div class="detail v" data-folder="R1-recycling-can">
+          <p class="quote">左桶牌 <code>RECYCLING</code>、右桶牌 <code>TRASH</code>（带图示）</p>
+          <div class="thumbs">
+            <button type="button" data-image="media/R1-recycling-can-scene.jpg"><img src="media/R1-recycling-can-scene.jpg" alt="场景" loading="lazy"><span>场景</span></button>
+            <button type="button" data-image="media/R1-recycling-can-text.jpg"><img src="media/R1-recycling-can-text.jpg" alt="文字特写" loading="lazy"><span>文字特写</span></button>
+          </div>
+        </div>
+      </article>
+      <article class="card" id="R2">
+        <div class="frame v" data-folder="R2-recycling-can-signs-swapped">
+          <video controls muted playsinline preload="metadata" poster="media/R2-recycling-can-signs-swapped-scene.jpg" src="media/R2-recycling-can-signs-swapped.mp4"></video>
+          
+          <button class="zoom" type="button" data-video="media/R2-recycling-can-signs-swapped.mp4">放大</button>
+        </div>
+        <div class="meta"><span class="pill">R2</span><span class="state done">已搭好</span></div>
+        <h3>同 R1，牌子互换</h3>
+        <div class="detail v" data-folder="R2-recycling-can-signs-swapped">
+          <p class="quote">左桶牌 <code>TRASH</code>、右桶牌 <code>RECYCLING</code></p>
+          <div class="thumbs">
+            <button type="button" data-image="media/R2-recycling-can-signs-swapped-scene.jpg"><img src="media/R2-recycling-can-signs-swapped-scene.jpg" alt="场景" loading="lazy"><span>场景</span></button>
+            <button type="button" data-image="media/R2-recycling-can-signs-swapped-text.jpg"><img src="media/R2-recycling-can-signs-swapped-text.jpg" alt="文字特写" loading="lazy"><span>文字特写</span></button>
+          </div>
+        </div>
+      </article>
+      <article class="card" id="R3">
+        <div class="frame v" data-folder="R3-recycling-bottle">
+          <video controls muted playsinline preload="metadata" poster="media/R3-recycling-bottle-scene.jpg" src="media/R3-recycling-bottle.mp4"></video>
+          
+          <button class="zoom" type="button" data-video="media/R3-recycling-bottle.mp4">放大</button>
+        </div>
+        <div class="meta"><span class="pill">R3</span><span class="state done">已搭好</span></div>
+        <h3>瓶底印着回收标识，要翻过来才看得到</h3>
+        <div class="detail v" data-folder="R3-recycling-bottle">
+          <p class="quote">瓶底：<code>PLASTIC 7 / NOT / RECYCLABLE</code>；左桶 <code>RECYCLING</code>、右桶 <code>TRASH</code></p>
+          <div class="thumbs">
+            <button type="button" data-image="media/R3-recycling-bottle-scene.jpg"><img src="media/R3-recycling-bottle-scene.jpg" alt="场景" loading="lazy"><span>场景</span></button>
+            <button type="button" data-image="media/R3-recycling-bottle-text.jpg"><img src="media/R3-recycling-bottle-text.jpg" alt="文字特写" loading="lazy"><span>文字特写</span></button>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="wrap">
+    <p class="foot">更新于 2026-11-03。视频为脚本示范，判分在复核，默认 1.6 倍速；点“放大”或缩略图看大图。</p>
+  </div>
+</section>
+
+<dialog id="lightbox" aria-label="放大查看"></dialog>
+
+<script>
+const RATE = 1.6;
+const box = document.getElementById("lightbox");
+
+function fastVideos(root) {
+  root.querySelectorAll("video").forEach(v => {
+    v.addEventListener("loadedmetadata", () => { v.playbackRate = RATE; });
+    v.addEventListener("play", () => { v.playbackRate = RATE; });
+  });
+}
+
+function open(node) {
+  box.replaceChildren(node);
+  fastVideos(box);
+  box.showModal();
+}
+
+document.addEventListener("click", e => {
+  const zoom = e.target.closest("[data-video]");
+  const thumb = e.target.closest("[data-image]");
+  const side = e.target.closest(".switch button");
+  if (zoom) {
+    const v = document.createElement("video");
+    Object.assign(v, { src: zoom.dataset.video, controls: true, muted: true, autoplay: true, playsInline: true });
+    open(v);
+  } else if (thumb) {
+    const img = document.createElement("img");
+    img.src = thumb.dataset.image;
+    img.alt = thumb.textContent.trim();
+    open(img);
+  } else if (side) {
+    const card = side.closest(".card");
+    card.querySelectorAll(".switch button").forEach(b => b.setAttribute("aria-pressed", String(b === side)));
+    card.querySelectorAll(".v").forEach(v => {
+      const shown = v.dataset.folder === side.dataset.folder;
+      v.hidden = !shown;
+      const video = v.querySelector("video");
+      if (video && shown) video.preload = "metadata";
+      if (video && !shown) video.pause();
+    });
+  }
+});
+
+box.addEventListener("click", e => { if (e.target === box) box.close(); });
+box.addEventListener("close", () => box.replaceChildren());
+fastVideos(document);
+</script>
+</body>
+</html>
